@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-node_modules
-.env
-=======
 # Environment
 .env
 .env.*
@@ -45,4 +41,3 @@ logs/
 # Keep production template in Git
 !.env.production.example
 *.tfplan
->>>>>>> origin/main
