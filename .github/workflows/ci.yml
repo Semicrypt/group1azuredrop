@@ -1,0 +1,330 @@
+name: AzureDrop CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+  pull_request:
+    branches:
+      - main
+      - develop
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+
+        env:
+          POSTGRES_DB: azuredrop
+          POSTGRES_USER: azuredrop
+          POSTGRES_PASSWORD: azuredrop_test_password
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd="pg_isready -U azuredrop -d azuredrop"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      NODE_ENV: test
+      PORT: 5000
+
+      POSTGRES_DB: azuredrop
+      POSTGRES_USER: azuredrop
+      POSTGRES_PASSWORD: azuredrop_test_password
+
+      DATABASE_URL: postgresql://azuredrop:azuredrop_test_password@localhost:5432/azuredrop
+      DATABASE_SSL: "false"
+      DATABASE_SSL_REJECT_UNAUTHORIZED: "true"
+
+      JWT_SECRET: github-actions-azuredrop-test-secret-not-for-production-2026
+      JWT_EXPIRES_IN: 1h
+
+      CORS_ORIGINS: http://localhost:5173
+      PUBLIC_BASE_URL: http://localhost:5000
+
+      MAX_FILE_SIZE_MB: 10
+
+      SHARE_DEFAULT_EXPIRY_MINUTES: 60
+      SHARE_MAX_EXPIRY_MINUTES: 10080
+
+      AZURE_STORAGE_CONTAINER_NAME: azuredrop-files
+
+      AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;
+
+      AZURE_STORAGE_PUBLIC_BLOB_ENDPOINT: http://127.0.0.1:10000/devstoreaccount1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Start Azurite
+        run: |
+          docker run -d \
+            --name azuredrop-ci-azurite \
+            -p 10000:10000 \
+            mcr.microsoft.com/azure-storage/azurite:latest \
+            azurite-blob \
+            --blobHost 0.0.0.0 \
+            --blobPort 10000
+
+          for attempt in {1..30}; do
+            if (
+              echo > /dev/tcp/127.0.0.1/10000
+            ) 2>/dev/null; then
+              echo "Azurite is ready"
+              exit 0
+            fi
+
+            sleep 1
+          done
+
+          echo "Azurite failed to start"
+          docker logs azuredrop-ci-azurite
+          exit 1
+
+      - name: Create Azurite container
+        working-directory: backend
+        run: |
+          node --input-type=module <<'NODE'
+          import {
+            BlobServiceClient,
+          } from "@azure/storage-blob";
+
+          const client =
+            BlobServiceClient
+              .fromConnectionString(
+                process.env
+                  .AZURE_STORAGE_CONNECTION_STRING
+              );
+
+          const container =
+            client.getContainerClient(
+              process.env
+                .AZURE_STORAGE_CONTAINER_NAME
+            );
+
+          await container
+            .createIfNotExists();
+
+          console.log(
+            "AzureDrop CI blob container ready"
+          );
+          NODE
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Run database migrations
+        env:
+          PGPASSWORD: azuredrop_test_password
+        run: |
+          psql \
+            -h localhost \
+            -U azuredrop \
+            -d azuredrop \
+            -f database/migrations/001_initial_schema.sql
+
+      - name: Run backend tests
+        working-directory: backend
+        run: npm test -- --runInBand
+
+
+  frontend-quality:
+    name: Frontend Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: /
+        run: npm run build
+
+
+  deploy-production:
+    name: Deploy Production
+
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+
+    needs:
+      - backend-tests
+      - frontend-quality
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 30
+
+    concurrency:
+      group: azuredrop-production
+      cancel-in-progress: false
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      AWS_REGION: eu-north-1
+      AWS_ACCOUNT_ID: "998361628336"
+
+      AWS_DEPLOY_ROLE: arn:aws:iam::998361628336:role/azuredrop-github-deploy-role
+
+      EC2_INSTANCE_ID: i-0273193528e99575b
+
+      PUBLIC_HEALTH_URL: https://13.48.161.78/health
+
+    steps:
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ env.AWS_DEPLOY_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
+          role-session-name: AzureDropGitHubDeploy
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Deploy AzureDrop through AWS Systems Manager
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/azuredrop-ssm-parameters.json <<'JSON'
+          {
+            "commands": [
+              "set -e",
+              "sudo -u ubuntu -H git -C /opt/azuredrop fetch origin main",
+              "sudo -u ubuntu -H git -C /opt/azuredrop checkout -B main origin/main",
+              "sudo -u ubuntu -H git -C /opt/azuredrop reset --hard origin/main",
+              "test -f /opt/azuredrop/.env.production",
+              "bash /opt/azuredrop/scripts/deploy-production.sh"
+            ]
+          }
+          JSON
+
+          COMMAND_ID="$(
+            aws ssm send-command \
+              --instance-ids "${EC2_INSTANCE_ID}" \
+              --document-name AWS-RunShellScript \
+              --comment "AzureDrop deployment ${GITHUB_SHA}" \
+              --parameters "$(cat /tmp/azuredrop-ssm-parameters.json)" \
+              --query 'Command.CommandId' \
+              --output text
+          )"
+
+          echo "SSM command ID: ${COMMAND_ID}"
+
+          set +e
+
+          aws ssm wait command-executed \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${EC2_INSTANCE_ID}"
+
+          WAIT_RESULT=$?
+
+          set -e
+
+          echo
+          echo "===== DEPLOYMENT RESULT ====="
+
+          aws ssm get-command-invocation \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${EC2_INSTANCE_ID}" \
+            --query '{
+              Status:Status,
+              Output:StandardOutputContent,
+              Error:StandardErrorContent
+            }' \
+            --output json
+
+          STATUS="$(
+            aws ssm get-command-invocation \
+              --command-id "${COMMAND_ID}" \
+              --instance-id "${EC2_INSTANCE_ID}" \
+              --query 'Status' \
+              --output text
+          )"
+
+          if [[ "${WAIT_RESULT}" -ne 0 ]] ||
+             [[ "${STATUS}" != "Success" ]]; then
+            echo "AzureDrop production deployment failed."
+            exit 1
+          fi
+
+          echo "AzureDrop SSM deployment completed successfully."
+
+      - name: Verify public production health
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for attempt in {1..20}; do
+            HEALTH="$(
+              curl -fsS \
+                "${PUBLIC_HEALTH_URL}" \
+                2>/dev/null || true
+            )"
+
+            if [[ "${HEALTH}" == *'"status":"healthy"'* ]] &&
+               [[ "${HEALTH}" == *'"database":"healthy"'* ]] &&
+               [[ "${HEALTH}" == *'"storage":"healthy"'* ]]; then
+
+              echo "Public AzureDrop health check passed."
+              echo "${HEALTH}"
+              exit 0
+            fi
+
+            echo "Public health attempt ${attempt}/20..."
+            sleep 5
+          done
+
+          echo "Public production health check failed."
+          exit 1

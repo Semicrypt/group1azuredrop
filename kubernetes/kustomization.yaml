@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - postgres.yaml
+  - azurite.yaml
+  - backend.yaml
+  - frontend.yaml
+
+configMapGenerator:
+  - name: azuredrop-frontend-nginx
+    namespace: azuredrop
+    files:
+      - default.conf=frontend-nginx.conf
+
+generatorOptions:
+  disableNameSuffixHash: true

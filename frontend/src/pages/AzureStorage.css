@@ -1,0 +1,893 @@
+/* =========================================================
+   AZUREDROP — AZURE STORAGE
+   Ubuntu-inspired aubergine / rust / cream design system
+   ========================================================= */
+
+.azure-storage-page {
+  --az-aubergine: #351c18;
+  --az-aubergine-deep: #241310;
+  --az-brown: #4b2922;
+  --az-rust: #c4512d;
+  --az-rust-dark: #a93f22;
+  --az-copper: #dc7347;
+  --az-cream: #f6efe9;
+  --az-paper: #fffdfb;
+  --az-text: #261b18;
+  --az-muted: #78645d;
+  --az-border: #e7d9d1;
+  --az-soft: #eee3dc;
+  --az-green: #477258;
+
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  background: var(--az-cream);
+  color: var(--az-text);
+}
+
+.azure-storage-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(
+      circle at 15% 10%,
+      rgba(220, 115, 71, 0.16),
+      transparent 30%
+    ),
+    linear-gradient(
+      180deg,
+      var(--az-aubergine) 0%,
+      var(--az-aubergine-deep) 100%
+    );
+  color: white;
+}
+
+.azure-storage-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 4px 6px 28px;
+}
+
+.azure-brand-mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--az-rust);
+  box-shadow:
+    0 10px 28px
+    rgba(196, 81, 45, 0.28);
+}
+
+.azure-storage-brand > div:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.azure-storage-brand strong {
+  font-size: 20px;
+  letter-spacing: -0.6px;
+}
+
+.azure-storage-brand strong span {
+  color: var(--az-copper);
+}
+
+.azure-storage-brand small {
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.azure-storage-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.azure-storage-sidebar nav button {
+  appearance: none;
+  width: 100%;
+  border: 0;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-radius: 11px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.64);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.azure-storage-sidebar nav button:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateX(2px);
+}
+
+.azure-storage-sidebar nav button.active {
+  color: white;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(196, 81, 45, 0.95),
+      rgba(169, 63, 34, 0.9)
+    );
+  box-shadow:
+    0 12px 28px
+    rgba(0, 0, 0, 0.18);
+}
+
+.azure-sidebar-security {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid
+    rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background:
+    rgba(255, 255, 255, 0.055);
+}
+
+.azure-sidebar-security svg {
+  color: var(--az-copper);
+}
+
+.azure-sidebar-security div {
+  display: flex;
+  flex-direction: column;
+}
+
+.azure-sidebar-security strong {
+  font-size: 12px;
+}
+
+.azure-sidebar-security span {
+  margin-top: 3px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.azure-storage-content {
+  width: min(1500px, 100%);
+  padding: 0 42px 52px;
+}
+
+.azure-storage-topbar {
+  min-height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.azure-back-button,
+.azure-refresh-button {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.azure-back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--az-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.azure-back-button:hover {
+  color: var(--az-rust);
+}
+
+.azure-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.azure-service-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid
+    rgba(71, 114, 88, 0.18);
+  border-radius: 999px;
+  background: rgba(71, 114, 88, 0.08);
+  color: var(--az-green);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.azure-service-status > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--az-green);
+  box-shadow:
+    0 0 0 4px
+    rgba(71, 114, 88, 0.12);
+}
+
+.azure-refresh-button {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--az-border);
+  border-radius: 11px;
+  background: var(--az-paper);
+  color: var(--az-muted);
+}
+
+.azure-refresh-button:hover {
+  color: var(--az-rust);
+  border-color: #d9b8a8;
+}
+
+.azure-storage-hero {
+  position: relative;
+  min-height: 350px;
+  overflow: hidden;
+  padding: 46px;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.4fr)
+    minmax(320px, 0.7fr);
+  gap: 40px;
+  align-items: center;
+  border-radius: 30px;
+  background:
+    linear-gradient(
+      125deg,
+      #2b1613 0%,
+      #42221c 62%,
+      #56281f 100%
+    );
+  color: white;
+  box-shadow:
+    0 24px 60px
+    rgba(52, 28, 24, 0.16);
+}
+
+.azure-hero-glow {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  top: -150px;
+  right: 15%;
+  border-radius: 50%;
+  background:
+    rgba(220, 115, 71, 0.22);
+  filter: blur(15px);
+}
+
+.azure-storage-hero-copy,
+.azure-architecture-card {
+  position: relative;
+  z-index: 2;
+}
+
+.azure-storage-eyebrow {
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 18px;
+  color: #eda47f;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.azure-storage-hero h1 {
+  max-width: 700px;
+  margin: 0;
+  font-size:
+    clamp(36px, 4vw, 58px);
+  line-height: 1.04;
+  letter-spacing: -2px;
+}
+
+.azure-storage-hero h1 span {
+  color: #e68157;
+}
+
+.azure-storage-hero-copy > p {
+  max-width: 650px;
+  margin: 22px 0 0;
+  color: rgba(255, 255, 255, 0.66);
+  line-height: 1.75;
+  font-size: 15px;
+}
+
+.azure-hero-actions {
+  margin-top: 30px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.azure-primary-button {
+  border: 0;
+  padding: 13px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 12px;
+  background: var(--az-rust);
+  color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow:
+    0 12px 28px
+    rgba(196, 81, 45, 0.25);
+}
+
+.azure-primary-button:hover {
+  background: var(--az-copper);
+}
+
+.azure-encryption-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 12px;
+}
+
+.azure-architecture-card {
+  padding: 24px;
+  border: 1px solid
+    rgba(255, 255, 255, 0.11);
+  border-radius: 22px;
+  background:
+    rgba(255, 255, 255, 0.075);
+  backdrop-filter: blur(12px);
+}
+
+.azure-architecture-title {
+  margin-bottom: 20px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.azure-flow-item {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.azure-flow-icon {
+  width: 41px;
+  height: 41px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: #6e3b31;
+  color: white;
+}
+
+.azure-flow-icon.rust {
+  background: var(--az-rust);
+}
+
+.azure-flow-icon.cream {
+  background: #e7c5b4;
+  color: var(--az-aubergine);
+}
+
+.azure-flow-item div {
+  display: flex;
+  flex-direction: column;
+}
+
+.azure-flow-item strong {
+  font-size: 13px;
+}
+
+.azure-flow-item small {
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 11px;
+}
+
+.azure-flow-line {
+  width: 1px;
+  height: 18px;
+  margin: 5px 0 5px 20px;
+  background:
+    rgba(255, 255, 255, 0.14);
+}
+
+.azure-stat-grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.azure-stat-grid article {
+  min-height: 134px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border: 1px solid var(--az-border);
+  border-radius: 18px;
+  background: var(--az-paper);
+}
+
+.azure-stat-icon {
+  width: 45px;
+  height: 45px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 13px;
+  background: #f1ddd4;
+  color: var(--az-rust);
+}
+
+.azure-stat-icon.copper {
+  background: #f5e2d6;
+  color: #b85e38;
+}
+
+.azure-stat-icon.cream {
+  background: #eee6d8;
+  color: #725638;
+}
+
+.azure-stat-icon.green {
+  background: #e3ece5;
+  color: var(--az-green);
+}
+
+.azure-stat-grid article > div:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.azure-stat-grid span {
+  color: var(--az-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.azure-stat-grid strong {
+  margin-top: 5px;
+  font-size: 22px;
+  letter-spacing: -0.7px;
+}
+
+.azure-stat-grid small {
+  margin-top: 3px;
+  color: #a08e86;
+  font-size: 11px;
+}
+
+.azure-container-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 16px !important;
+}
+
+.azure-storage-grid {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.55fr)
+    minmax(300px, 0.65fr);
+  gap: 20px;
+}
+
+.azure-main-panel,
+.azure-security-panel {
+  border: 1px solid var(--az-border);
+  border-radius: 22px;
+  background: var(--az-paper);
+}
+
+.azure-main-panel {
+  padding: 24px;
+}
+
+.azure-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid
+    var(--az-soft);
+}
+
+.azure-panel-heading > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.azure-panel-heading span,
+.azure-security-panel > span {
+  color: var(--az-rust);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.azure-panel-heading h2,
+.azure-security-panel h2 {
+  margin: 5px 0 0;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+}
+
+.azure-panel-heading button {
+  border: 0;
+  background: transparent;
+  color: var(--az-rust);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.azure-file-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.azure-file-row {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns:
+    42px minmax(0, 1fr)
+    auto auto;
+  gap: 14px;
+  align-items: center;
+  border-bottom: 1px solid
+    var(--az-soft);
+}
+
+.azure-file-row:last-child {
+  border-bottom: 0;
+}
+
+.azure-file-symbol {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #f4e8e2;
+  color: var(--az-rust);
+}
+
+.azure-file-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.azure-file-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.azure-file-info span,
+.azure-file-row time {
+  margin-top: 4px;
+  color: var(--az-muted);
+  font-size: 11px;
+}
+
+.azure-file-provider {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #f1e5df;
+  color: #8f4229;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.azure-file-row time {
+  min-width: 126px;
+  text-align: right;
+}
+
+.azure-security-panel {
+  padding: 26px;
+  background:
+    linear-gradient(
+      165deg,
+      #fffdfa,
+      #f8eee8
+    );
+}
+
+.azure-security-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: var(--az-aubergine);
+  color: #f3b08e;
+}
+
+.azure-security-panel p {
+  margin: 14px 0 24px;
+  color: var(--az-muted);
+  line-height: 1.7;
+  font-size: 13px;
+}
+
+.azure-security-panel ul {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  list-style: none;
+}
+
+.azure-security-panel li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #5f4c45;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.azure-security-panel li svg {
+  color: var(--az-green);
+}
+
+.azure-empty-state {
+  padding: 55px 20px;
+  text-align: center;
+}
+
+.azure-empty-state > div {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: #f4e6df;
+  color: var(--az-rust);
+}
+
+.azure-empty-state h3 {
+  margin: 16px 0 6px;
+  font-size: 17px;
+}
+
+.azure-empty-state p {
+  margin: 0 auto;
+  max-width: 360px;
+  color: var(--az-muted);
+  font-size: 12px;
+}
+
+.azure-empty-state button {
+  margin-top: 18px;
+  border: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--az-aubergine);
+  color: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.azure-storage-error {
+  margin-top: 18px;
+  padding: 13px 15px;
+  border: 1px solid #edc5b5;
+  border-radius: 12px;
+  background: #fff1ea;
+  color: #9a3f22;
+  font-size: 13px;
+}
+
+.azure-storage-loading {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  background: #f6efe9;
+  color: #261b18;
+}
+
+.azure-loading-mark {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 8px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: #351c18;
+  color: #e68157;
+}
+
+.azure-storage-loading strong {
+  font-size: 17px;
+}
+
+.azure-storage-loading span {
+  color: #78645d;
+  font-size: 12px;
+}
+
+.spinning {
+  animation:
+    azure-spin 0.8s linear
+    infinite;
+}
+
+@keyframes azure-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1100px) {
+  .azure-storage-page {
+    grid-template-columns: 210px minmax(0, 1fr);
+  }
+
+  .azure-storage-content {
+    padding-inline: 26px;
+  }
+
+  .azure-storage-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .azure-stat-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .azure-storage-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .azure-storage-page {
+    display: block;
+  }
+
+  .azure-storage-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    padding: 16px;
+  }
+
+  .azure-storage-sidebar nav {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .azure-storage-sidebar nav button {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .azure-sidebar-security {
+    display: none;
+  }
+
+  .azure-storage-brand {
+    padding-bottom: 16px;
+  }
+
+  .azure-storage-content {
+    padding: 0 16px 36px;
+  }
+
+  .azure-storage-hero {
+    min-height: auto;
+    padding: 28px 22px;
+    border-radius: 22px;
+  }
+
+  .azure-storage-hero h1 {
+    font-size: 36px;
+  }
+
+  .azure-architecture-card {
+    margin-top: 5px;
+  }
+
+  .azure-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .azure-file-row {
+    grid-template-columns:
+      42px minmax(0, 1fr);
+  }
+
+  .azure-file-provider,
+  .azure-file-row time {
+    display: none;
+  }
+
+  .azure-hero-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.azure-service-status.checking {
+  color: #9a603f;
+  border-color:
+    rgba(196, 81, 45, 0.18);
+  background:
+    rgba(196, 81, 45, 0.08);
+}
+
+.azure-service-status.checking > span {
+  background: #c46b43;
+  box-shadow:
+    0 0 0 4px
+    rgba(196, 81, 45, 0.1);
+}
+
+.azure-service-status.unhealthy {
+  color: #9b3434;
+  border-color:
+    rgba(155, 52, 52, 0.2);
+  background:
+    rgba(155, 52, 52, 0.08);
+}
+
+.azure-service-status.unhealthy > span {
+  background: #b54444;
+  box-shadow:
+    0 0 0 4px
+    rgba(181, 68, 68, 0.1);
+}

@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: azuredrop
+spec:
+  selector:
+    app: azuredrop-backend
+
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: azuredrop
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: azuredrop-backend
+
+  template:
+    metadata:
+      labels:
+        app: azuredrop-backend
+
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:17-alpine
+          imagePullPolicy: Never
+
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL..."
+
+              until pg_isready \
+                -h postgres \
+                -p 5432 \
+                -U azuredrop \
+                -d azuredrop
+              do
+                sleep 2
+              done
+
+              echo "PostgreSQL is ready."
+
+        - name: storage-init
+          image: azuredrop-backend:k8s
+          imagePullPolicy: Never
+
+          command:
+            - node
+            - --input-type=module
+            - -e
+            - |
+              import('./src/services/storage.service.js')
+                .then(async (m) => {
+                  await m.ensureStorageContainer();
+                  console.log('AzureDrop Blob container ready');
+                  process.exit(0);
+                })
+                .catch((error) => {
+                  console.error(error);
+                  process.exit(1);
+                });
+
+          env:
+            - name: NODE_ENV
+              value: production
+
+            - name: PORT
+              value: "5000"
+
+            - name: AZURE_STORAGE_CONTAINER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: azuredrop-config
+                  key: AZURE_STORAGE_CONTAINER_NAME
+
+            - name: AZURE_STORAGE_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: azuredrop-secrets
+                  key: AZURE_STORAGE_CONNECTION_STRING
+
+      containers:
+        - name: backend
+          image: azuredrop-backend:k8s
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 5000
+              name: http
+
+          envFrom:
+            - configMapRef:
+                name: azuredrop-config
+
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: azuredrop-secrets
+                  key: POSTGRES_PASSWORD
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: azuredrop-secrets
+                  key: JWT_SECRET
+
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: azuredrop-secrets
+                  key: DATABASE_URL
+
+            - name: AZURE_STORAGE_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: azuredrop-secrets
+                  key: AZURE_STORAGE_CONNECTION_STRING
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            periodSeconds: 5
+            failureThreshold: 24
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+
+            limits:
+              cpu: 500m
+              memory: 512Mi

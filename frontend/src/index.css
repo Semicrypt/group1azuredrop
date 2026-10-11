@@ -1,0 +1,576 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
+
+/* =========================================================
+   AZUREDROP GLOBAL THEME
+   ========================================================= */
+
+:root {
+  font-family:
+    "DM Sans",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  color: #f8fafc;
+
+  background: #050914;
+
+  font-synthesis: none;
+
+  text-rendering:
+    optimizeLegibility;
+
+  -webkit-font-smoothing:
+    antialiased;
+
+  -moz-osx-font-smoothing:
+    grayscale;
+
+  color-scheme: dark;
+
+  /* Core AzureDrop palette */
+
+  --bg: #050914;
+
+  --bg-soft: #080e1a;
+
+  --panel: #0d1626;
+
+  --panel-soft: #111c2f;
+
+  --border:
+    rgba(
+      148,
+      163,
+      184,
+      0.1
+    );
+
+  --border-strong:
+    rgba(
+      148,
+      163,
+      184,
+      0.16
+    );
+
+  --text: #f8fafc;
+
+  --text-soft: #c6d1df;
+
+  --muted: #7d8fa8;
+
+  --muted-light: #9dacbf;
+
+  --accent: #4385ff;
+
+  --accent-dark: #326be0;
+
+  --accent-light: #72a5ff;
+
+  --accent-soft:
+    rgba(
+      67,
+      133,
+      255,
+      0.1
+    );
+
+  --success: #36d399;
+
+  --danger: #ff6b7a;
+
+  --warning: #e4b45f;
+}
+
+/* =========================================================
+   RESET
+   ========================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing:
+    border-box;
+}
+
+html {
+  min-width: 320px;
+
+  min-height: 100%;
+
+  background:
+    var(--bg);
+
+  scroll-behavior:
+    smooth;
+}
+
+body {
+  margin: 0;
+
+  min-width: 320px;
+
+  min-height: 100vh;
+
+  color:
+    var(--text);
+
+  background:
+    var(--bg);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color:
+    transparent;
+}
+
+button {
+  border: 0;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+
+  text-decoration: none;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+img {
+  display: block;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+
+::selection {
+  color: #ffffff;
+
+  background:
+    rgba(
+      67,
+      133,
+      255,
+      0.38
+    );
+}
+
+/* =========================================================
+   SCROLLBARS
+   ========================================================= */
+
+* {
+  scrollbar-width:
+    thin;
+
+  scrollbar-color:
+    #263652
+    transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 7px;
+
+  height: 7px;
+}
+
+*::-webkit-scrollbar-track {
+  background:
+    transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius:
+    999px;
+
+  background:
+    #263652;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background:
+    #33496b;
+}
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+:focus-visible {
+  outline:
+    2px solid
+    rgba(
+      114,
+      165,
+      255,
+      0.8
+    );
+
+  outline-offset:
+    2px;
+}
+
+button:disabled,
+input:disabled,
+textarea:disabled,
+select:disabled {
+  cursor:
+    not-allowed;
+}
+
+/* =========================================================
+   SHARED UTILITIES
+   Temporary compatibility for FileDetailsModal.
+   These can be removed once that component is fully
+   namespaced in the next frontend batch.
+   ========================================================= */
+
+.muted-label {
+  color:
+    var(--muted);
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  letter-spacing:
+    0.07em;
+
+  text-transform:
+    uppercase;
+}
+
+.button {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap: 8px;
+
+  box-sizing:
+    border-box;
+
+  min-height: 42px;
+
+  padding:
+    0 15px;
+
+  border-radius:
+    9px;
+
+  font-size:
+    10px;
+
+  font-weight:
+    800;
+
+  transition:
+    transform
+      160ms ease,
+    border-color
+      160ms ease,
+    background
+      160ms ease,
+    box-shadow
+      160ms ease,
+    opacity
+      160ms ease;
+}
+
+.button:hover:not(:disabled) {
+  transform:
+    translateY(-1px);
+}
+
+.button-primary {
+  color: #ffffff;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--accent),
+      var(--accent-dark)
+    );
+
+  box-shadow:
+    0 11px 27px
+    rgba(
+      67,
+      133,
+      255,
+      0.2
+    );
+}
+
+.button-primary:hover:not(:disabled) {
+  box-shadow:
+    0 14px 32px
+    rgba(
+      67,
+      133,
+      255,
+      0.29
+    );
+}
+
+.button-secondary {
+  border:
+    1px solid
+    var(--border-strong);
+
+  color:
+    #aebed0;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.025
+    );
+}
+
+.button-secondary:hover:not(:disabled) {
+  border-color:
+    rgba(
+      96,
+      165,
+      250,
+      0.24
+    );
+
+  color: #ffffff;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.05
+    );
+}
+
+.button:disabled {
+  opacity: 0.55;
+
+  transform: none;
+}
+
+/* =========================================================
+   LEGACY FILE DETAILS SUPPORT
+   ========================================================= */
+
+.modal-backdrop {
+  position: fixed;
+
+  z-index: 240;
+
+  inset: 0;
+
+  display: grid;
+
+  place-items: center;
+
+  box-sizing:
+    border-box;
+
+  padding: 20px;
+
+  background:
+    rgba(
+      1,
+      4,
+      11,
+      0.78
+    );
+
+  backdrop-filter:
+    blur(11px);
+
+  -webkit-backdrop-filter:
+    blur(11px);
+}
+
+.modal-close {
+  display: grid;
+
+  width: 37px;
+
+  height: 37px;
+
+  flex-shrink: 0;
+
+  padding: 0;
+
+  place-items: center;
+
+  border:
+    1px solid
+    rgba(
+      148,
+      163,
+      184,
+      0.1
+    );
+
+  border-radius:
+    9px;
+
+  color: #7789a0;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.025
+    );
+
+  transition:
+    color
+      160ms ease,
+    border-color
+      160ms ease,
+    background
+      160ms ease;
+}
+
+.modal-close:hover {
+  color: #ffffff;
+
+  border-color:
+    rgba(
+      96,
+      165,
+      250,
+      0.2
+    );
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.05
+    );
+}
+
+.error-banner {
+  padding:
+    11px 13px;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      107,
+      122,
+      0.16
+    );
+
+  border-radius:
+    10px;
+
+  color: #ffb0ba;
+
+  font-size: 10px;
+
+  line-height: 1.45;
+
+  background:
+    rgba(
+      92,
+      21,
+      32,
+      0.22
+    );
+}
+
+.spinner {
+  animation:
+    azuredrop-spin
+    0.8s linear
+    infinite;
+}
+
+@keyframes azuredrop-spin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+/* =========================================================
+   MOBILE GLOBALS
+   ========================================================= */
+
+@media (
+  max-width: 600px
+) {
+  .modal-backdrop {
+    align-items:
+      end;
+
+    padding: 0;
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (
+  prefers-reduced-motion:
+    reduce
+) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior:
+      auto !important;
+
+    animation-duration:
+      0.01ms !important;
+
+    animation-iteration-count:
+      1 !important;
+
+    transition-duration:
+      0.01ms !important;
+  }
+}
