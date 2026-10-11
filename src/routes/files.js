@@ -1,45 +1,49 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const crypto = require('crypto');
+const { BlobServiceClient } = require('@azure/storage-blob');
 const prisma = require('../lib/prisma');
 const requireAuth = require('../middleware/auth');
 const requireAdmin = require('../middleware/admin');
 
 const router = express.Router();
 
-// --- Local disk storage (Phase 1/2). Phase 3 swaps this for S3 upload logic,
-// but the routes/response shapes below stay the same so nothing downstream breaks. ---
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+// --- Azure Blob Storage (Azurite locally, real Azure Blob Storage in production) ---
+const AZURE_CONNECTION_STRING =
+  process.env.AZURE_STORAGE_CONNECTION_STRING ||
+  'DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;';
+const CONTAINER_NAME = 'vektralock-files';
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
+const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_CONNECTION_STRING);
+const containerClient = blobServiceClient.getContainerClient(CONTAINER_NAME);
+
+async function ensureContainer() {
+  await containerClient.createIfNotExists();
+}
+ensureContainer().catch((err) => console.error('Failed to set up blob container:', err));
 
 const upload = multer({
-  storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB cap — adjust as needed
-  // Any file type is allowed per project requirements, so no fileFilter here.
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },
 });
 
-// POST /api/files/upload  (requires auth, multipart/form-data, field name "file")
-// optional body field: category
 router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded (expected field name "file")' });
     }
 
+    const blobName = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}-${req.file.originalname}`;
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+    await blockBlobClient.uploadData(req.file.buffer, {
+      blobHTTPHeaders: { blobContentType: req.file.mimetype },
+    });
+
     const file = await prisma.file.create({
       data: {
         filename: req.file.originalname,
-        storedName: req.file.filename,
+        storedName: blobName,
         mimeType: req.file.mimetype,
         size: req.file.size,
         category: req.body.category || 'general',
@@ -54,8 +58,6 @@ router.post('/upload', requireAuth, upload.single('file'), async (req, res) => {
   }
 });
 
-// GET /api/files  (requires auth) — lists the logged-in user's own files
-// optional query params: ?search=name&category=xyz
 router.get('/', requireAuth, async (req, res) => {
   try {
     const { search, category } = req.query;
@@ -76,7 +78,6 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/files/:id/download  (requires auth, must own the file or be admin)
 router.get('/:id/download', requireAuth, async (req, res) => {
   try {
     const file = await prisma.file.findUnique({ where: { id: Number(req.params.id) } });
@@ -86,16 +87,18 @@ router.get('/:id/download', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'You do not have access to this file' });
     }
 
-    const filePath = path.join(UPLOAD_DIR, file.storedName);
-    res.download(filePath, file.filename);
+    const blockBlobClient = containerClient.getBlockBlobClient(file.storedName);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.setHeader('Content-Type', file.mimeType);
+
+    const downloadResponse = await blockBlobClient.download();
+    downloadResponse.readableStreamBody.pipe(res);
   } catch (err) {
     console.error('Download error:', err);
     res.status(500).json({ error: 'Something went wrong during download' });
   }
 });
 
-// POST /api/files/:id/share  (requires auth, owner only)
-// Generates a temporary share link that works without auth for 1 hour.
 router.post('/:id/share', requireAuth, async (req, res) => {
   try {
     const file = await prisma.file.findUnique({ where: { id: Number(req.params.id) } });
@@ -106,7 +109,7 @@ router.post('/:id/share', requireAuth, async (req, res) => {
     }
 
     const shareToken = crypto.randomBytes(24).toString('hex');
-    const shareExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const shareExpires = new Date(Date.now() + 60 * 60 * 1000);
 
     await prisma.file.update({
       where: { id: file.id },
@@ -120,7 +123,6 @@ router.post('/:id/share', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/files/shared/:token  (NO auth required — this is the public temporary link)
 router.get('/shared/:token', async (req, res) => {
   try {
     const file = await prisma.file.findUnique({ where: { shareToken: req.params.token } });
@@ -129,15 +131,18 @@ router.get('/shared/:token', async (req, res) => {
       return res.status(410).json({ error: 'This share link is invalid or has expired' });
     }
 
-    const filePath = path.join(UPLOAD_DIR, file.storedName);
-    res.download(filePath, file.filename);
+    const blockBlobClient = containerClient.getBlockBlobClient(file.storedName);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.setHeader('Content-Type', file.mimeType);
+
+    const downloadResponse = await blockBlobClient.download();
+    downloadResponse.readableStreamBody.pipe(res);
   } catch (err) {
     console.error('Shared download error:', err);
     res.status(500).json({ error: 'Something went wrong' });
   }
 });
 
-// GET /api/files/all  (requires auth + admin) — see every user's files
 router.get('/admin/all', requireAuth, requireAdmin, async (req, res) => {
   try {
     const files = await prisma.file.findMany({

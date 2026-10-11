@@ -4,13 +4,23 @@ services:
     image: postgres:16
     restart: unless-stopped
     environment:
-      POSTGRES_USER: securevault
-      POSTGRES_PASSWORD: securevault
-      POSTGRES_DB: securevault
+      POSTGRES_USER: vektralock
+      POSTGRES_PASSWORD: vektralock
+      POSTGRES_DB: vektralock
     ports:
       - "5432:5432"
     volumes:
-      - securevault_pgdata:/var/lib/postgresql/data
+      - vektralock_pgdata:/var/lib/postgresql/data
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    restart: unless-stopped
+    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000"
+    ports:
+      - "10000:10000"
+    volumes:
+      - vektralock_azurite:/data
 
 volumes:
-  securevault_pgdata:
+  vektralock_pgdata:
+  vektralock_azurite:

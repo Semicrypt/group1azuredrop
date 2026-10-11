@@ -12,6 +12,7 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@azure/storage-blob": "^12.17.0",
     "@prisma/client": "^5.20.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
