@@ -1,0 +1,151 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: azuredrop-postgres
+    restart: unless-stopped
+
+    env_file:
+      - .env.production
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - azuredrop_postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - azuredrop-network
+
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: azuredrop-azurite
+    restart: unless-stopped
+
+    command:
+      azurite-blob
+      --blobHost 0.0.0.0
+      --blobPort 10000
+      --location /data
+
+    volumes:
+      - azuredrop_azurite_data:/data
+
+    networks:
+      - azuredrop-network
+
+
+  storage-init:
+    build:
+      context: ./backend
+
+    container_name: azuredrop-storage-init
+    restart: "no"
+
+    env_file:
+      - .env.production
+
+    command:
+      [
+        "node",
+        "--input-type=module",
+        "-e",
+        "import('./src/services/storage.service.js').then(async (m) => { await m.ensureStorageContainer(); console.log('AzureDrop Blob container ready'); process.exit(0); }).catch((e) => { console.error(e); process.exit(1); })"
+      ]
+
+    depends_on:
+      - azurite
+
+    networks:
+      - azuredrop-network
+
+
+  backend:
+    build:
+      context: ./backend
+
+    container_name: azuredrop-api
+    restart: unless-stopped
+
+    env_file:
+      - .env.production
+
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      storage-init:
+        condition: service_completed_successfully
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:5000/health"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+    networks:
+      - azuredrop-network
+
+
+  frontend:
+    build:
+      context: ./frontend
+
+      args:
+        VITE_API_BASE_URL: /
+
+    container_name: azuredrop-web
+    restart: unless-stopped
+
+    ports:
+      - "${AZUREDROP_HTTP_PORT:-80}:80"
+      - "${AZUREDROP_HTTPS_PORT:-443}:443"
+
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    networks:
+      - azuredrop-network
+
+
+volumes:
+  azuredrop_postgres_data:
+    name: azuredrop_prod_postgres_data
+
+  azuredrop_azurite_data:
+    name: azuredrop_prod_azurite_data
+
+
+networks:
+  azuredrop-network:
+    driver: bridge

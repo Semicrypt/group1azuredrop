@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: azurite-data
+  namespace: azuredrop
+spec:
+  accessModes:
+    - ReadWriteOnce
+
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: azurite
+  namespace: azuredrop
+spec:
+  selector:
+    app: azurite
+
+  ports:
+    - name: blob
+      port: 10000
+      targetPort: 10000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azurite
+  namespace: azuredrop
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: azurite
+
+  template:
+    metadata:
+      labels:
+        app: azurite
+
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: azurite
+          image: mcr.microsoft.com/azure-storage/azurite:latest
+          imagePullPolicy: Never
+
+          args:
+            - azurite-blob
+            - --blobHost
+            - 0.0.0.0
+            - --blobPort
+            - "10000"
+            - --location
+            - /data
+
+          ports:
+            - containerPort: 10000
+              name: blob
+
+          volumeMounts:
+            - name: azurite-data
+              mountPath: /data
+
+          readinessProbe:
+            tcpSocket:
+              port: 10000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+          livenessProbe:
+            tcpSocket:
+              port: 10000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+
+            limits:
+              cpu: 300m
+              memory: 256Mi
+
+      volumes:
+        - name: azurite-data
+          persistentVolumeClaim:
+            claimName: azurite-data

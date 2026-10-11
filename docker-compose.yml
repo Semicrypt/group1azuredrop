@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: azuredrop-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - azuredrop_postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - azuredrop-network
+
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: azuredrop-azurite
+    restart: unless-stopped
+
+    command:
+      azurite-blob
+      --blobHost 0.0.0.0
+      --blobPort 10000
+      --location /data
+      --debug /data/debug.log
+
+    ports:
+      - "10000:10000"
+
+    volumes:
+      - azuredrop_azurite_data:/data
+
+    networks:
+      - azuredrop-network
+
+  backend:
+    build:
+      context: ./backend
+
+    container_name: azuredrop-api
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+
+    ports:
+      - "5001:5000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:5000/health"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - azuredrop-network
+
+volumes:
+  azuredrop_postgres_data:
+  azuredrop_azurite_data:
+
+networks:
+  azuredrop-network:
+    driver: bridge
