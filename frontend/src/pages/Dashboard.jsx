@@ -14,6 +14,7 @@ import {
   Search,
   Share2,
   ShieldCheck,
+  Trash2,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -181,6 +182,29 @@ export default function Dashboard() {
     selectedFile,
     setSelectedFile,
   ] = useState(null);
+
+  const [
+    selectedFileIds,
+    setSelectedFileIds,
+  ] = useState([]);
+
+  const [
+    bulkDeleting,
+    setBulkDeleting,
+  ] = useState(false);
+
+  const [
+    bulkDeleteConfirm,
+    setBulkDeleteConfirm,
+  ] = useState(false);
+
+  const [
+    bulkDeleteProgress,
+    setBulkDeleteProgress,
+  ] = useState({
+    current: 0,
+    total: 0,
+  });
 
   const [
     mobileMenuOpen,
@@ -393,7 +417,20 @@ export default function Dashboard() {
 
   const handleDeleted =
     useCallback(async () => {
+      const deletedFileId =
+        selectedFile?.id;
+
       setSelectedFile(null);
+
+      if (deletedFileId) {
+        setSelectedFileIds(
+          (current) =>
+            current.filter(
+              (id) =>
+                id !== deletedFileId
+            )
+        );
+      }
 
       try {
         await loadFiles({
@@ -404,7 +441,10 @@ export default function Dashboard() {
           "File deleted, but the workspace could not be refreshed."
         );
       }
-    }, [loadFiles]);
+    }, [
+      loadFiles,
+      selectedFile?.id,
+    ]);
 
   const filteredFiles =
     useMemo(() => {
@@ -441,6 +481,185 @@ export default function Dashboard() {
       search,
       category,
     ]);
+
+  const visibleFileIds =
+    useMemo(
+      () =>
+        filteredFiles.map(
+          (file) =>
+            file.id
+        ),
+      [filteredFiles]
+    );
+
+  const selectedCount =
+    selectedFileIds.length;
+
+  const allVisibleSelected =
+    visibleFileIds.length > 0 &&
+    visibleFileIds.every(
+      (id) =>
+        selectedFileIds.includes(
+          id
+        )
+    );
+
+  function toggleFileSelection(
+    fileId,
+    event
+  ) {
+    event.stopPropagation();
+
+    if (bulkDeleting) {
+      return;
+    }
+
+    setBulkDeleteConfirm(false);
+
+    setSelectedFileIds(
+      (current) =>
+        current.includes(fileId)
+          ? current.filter(
+              (id) =>
+                id !== fileId
+            )
+          : [
+              ...current,
+              fileId,
+            ]
+    );
+  }
+
+  function toggleSelectAllVisible() {
+    if (bulkDeleting) {
+      return;
+    }
+
+    setBulkDeleteConfirm(false);
+
+    setSelectedFileIds(
+      (current) => {
+        if (allVisibleSelected) {
+          return current.filter(
+            (id) =>
+              !visibleFileIds.includes(
+                id
+              )
+          );
+        }
+
+        return Array.from(
+          new Set([
+            ...current,
+            ...visibleFileIds,
+          ])
+        );
+      }
+    );
+  }
+
+  function clearFileSelection() {
+    if (bulkDeleting) {
+      return;
+    }
+
+    setSelectedFileIds([]);
+    setBulkDeleteConfirm(false);
+  }
+
+  async function handleBulkDelete() {
+    if (
+      bulkDeleting ||
+      selectedFileIds.length === 0
+    ) {
+      return;
+    }
+
+    if (!bulkDeleteConfirm) {
+      setBulkDeleteConfirm(true);
+      return;
+    }
+
+    const idsToDelete = [
+      ...selectedFileIds,
+    ];
+
+    const failedIds = [];
+
+    let successfulDeletes = 0;
+
+    try {
+      setBulkDeleting(true);
+      setError("");
+
+      setBulkDeleteProgress({
+        current: 0,
+        total: idsToDelete.length,
+      });
+
+      for (
+        let index = 0;
+        index < idsToDelete.length;
+        index += 1
+      ) {
+        const fileId =
+          idsToDelete[index];
+
+        setBulkDeleteProgress({
+          current: index + 1,
+          total: idsToDelete.length,
+        });
+
+        try {
+          await api.delete(
+            `/api/files/${fileId}`
+          );
+
+          successfulDeletes += 1;
+        } catch {
+          failedIds.push(
+            fileId
+          );
+        }
+      }
+
+      setSelectedFileIds(
+        failedIds
+      );
+
+      setBulkDeleteConfirm(
+        false
+      );
+
+      try {
+        await loadFiles({
+          quiet: true,
+        });
+      } catch {
+        setError(
+          "Files were deleted, but the workspace could not be refreshed."
+        );
+
+        return;
+      }
+
+      if (
+        failedIds.length > 0
+      ) {
+        setError(
+          `${successfulDeletes} of ${idsToDelete.length} files deleted successfully. ` +
+            `${failedIds.length} failed and remain selected.`
+        );
+      }
+    } finally {
+      setBulkDeleting(false);
+
+      setBulkDeleteProgress({
+        current: 0,
+        total: 0,
+      });
+    }
+  }
 
   const totalSize =
     useMemo(
@@ -1097,6 +1316,108 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {filteredFiles.length > 0 && (
+            <div className="az-bulk-toolbar">
+              <div className="az-bulk-selection-actions">
+                <label className="az-bulk-select-all">
+                  <input
+                    type="checkbox"
+                    checked={
+                      allVisibleSelected
+                    }
+                    onChange={
+                      toggleSelectAllVisible
+                    }
+                    disabled={
+                      bulkDeleting
+                    }
+                  />
+
+                  <span>
+                    {allVisibleSelected
+                      ? "Deselect visible"
+                      : "Select all visible"}
+                  </span>
+                </label>
+
+                {selectedCount > 0 && (
+                  <span className="az-selected-count">
+                    {selectedCount} selected
+                  </span>
+                )}
+
+                {selectedCount > 0 && (
+                  <button
+                    type="button"
+                    className="az-clear-selection"
+                    onClick={
+                      clearFileSelection
+                    }
+                    disabled={
+                      bulkDeleting
+                    }
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {selectedCount > 0 && (
+                <div className="az-bulk-delete-actions">
+                  {bulkDeleteConfirm && (
+                    <span className="az-bulk-delete-warning">
+                      Delete {selectedCount} selected file{
+                        selectedCount === 1
+                          ? ""
+                          : "s"
+                      }? This cannot be undone.
+                    </span>
+                  )}
+
+                  {bulkDeleteConfirm && (
+                    <button
+                      type="button"
+                      className="az-bulk-cancel-button"
+                      onClick={() =>
+                        setBulkDeleteConfirm(
+                          false
+                        )
+                      }
+                      disabled={
+                        bulkDeleting
+                      }
+                    >
+                      Cancel
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className={`az-bulk-delete-button ${
+                      bulkDeleteConfirm
+                        ? "confirming"
+                        : ""
+                    }`}
+                    onClick={
+                      handleBulkDelete
+                    }
+                    disabled={
+                      bulkDeleting
+                    }
+                  >
+                    <Trash2 size={15} />
+
+                    {bulkDeleting
+                      ? `Deleting ${bulkDeleteProgress.current} of ${bulkDeleteProgress.total}…`
+                      : bulkDeleteConfirm
+                        ? `Confirm delete ${selectedCount}`
+                        : "Delete selected"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {filteredFiles.length ===
           0 ? (
             <div className="az-empty-files">
@@ -1134,6 +1455,11 @@ export default function Dashboard() {
           ) : (
             <div className="az-file-table">
               <div className="az-file-table-head">
+                <span
+                  className="az-file-select-head"
+                  aria-hidden="true"
+                />
+
                 <span>
                   Name
                 </span>
@@ -1163,16 +1489,69 @@ export default function Dashboard() {
                     );
 
                   return (
-                    <button
-                      className="az-file-row"
-                      type="button"
+                    <div
+                      className={`az-file-row ${
+                        selectedFileIds.includes(
+                          file.id
+                        )
+                          ? "selected"
+                          : ""
+                      }`}
                       key={file.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() =>
                         setSelectedFile(
                           file
                         )
                       }
+                      onKeyDown={(
+                        event
+                      ) => {
+                        if (
+                          event.key ===
+                            "Enter" ||
+                          event.key ===
+                            " "
+                        ) {
+                          event.preventDefault();
+
+                          setSelectedFile(
+                            file
+                          );
+                        }
+                      }}
                     >
+                      <span
+                        className="az-file-select-cell"
+                        onClick={(
+                          event
+                        ) =>
+                          event.stopPropagation()
+                        }
+                      >
+                        <input
+                          type="checkbox"
+                          checked={
+                            selectedFileIds.includes(
+                              file.id
+                            )
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            toggleFileSelection(
+                              file.id,
+                              event
+                            )
+                          }
+                          disabled={
+                            bulkDeleting
+                          }
+                          aria-label={`Select ${file.original_name}`}
+                        />
+                      </span>
+
                       <span className="az-file-name-cell">
                         <span className="az-file-type-icon">
                           <Icon
@@ -1214,7 +1593,7 @@ export default function Dashboard() {
                           file.uploaded_at
                         )}
                       </span>
-                    </button>
+                    </div>
                   );
                 }
               )}

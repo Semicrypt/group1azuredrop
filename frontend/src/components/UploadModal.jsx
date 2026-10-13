@@ -75,9 +75,17 @@ export default function UploadModal({
     useRef(null);
 
   const [
-    file,
-    setFile,
-  ] = useState(null);
+    files,
+    setFiles,
+  ] = useState([]);
+
+  const [
+    uploadProgress,
+    setUploadProgress,
+  ] = useState({
+    current: 0,
+    total: 0,
+  });
 
   const [
     description,
@@ -103,26 +111,14 @@ export default function UploadModal({
     return null;
   }
 
-  function selectFile(
+  function validateFile(
     selectedFile
   ) {
-    if (!selectedFile) {
-      return;
-    }
-
-    setError("");
-
     if (
       selectedFile.size >
       MAX_FILE_SIZE
     ) {
-      setFile(null);
-
-      setError(
-        "File is too large. Maximum file size is 10 MB."
-      );
-
-      return;
+      return `${selectedFile.name}: file is larger than 10 MB.`;
     }
 
     if (
@@ -130,16 +126,66 @@ export default function UploadModal({
         selectedFile.type
       )
     ) {
-      setFile(null);
+      return `${selectedFile.name}: unsupported file format.`;
+    }
 
-      setError(
-        "Unsupported file format. Please choose JPG, PNG, WEBP, PDF, TXT, CSV, ZIP, DOCX, XLSX or PPTX."
+    return null;
+  }
+
+  function selectFiles(
+    selectedFiles
+  ) {
+    const incoming =
+      Array.from(
+        selectedFiles || []
       );
 
+    if (!incoming.length) {
       return;
     }
 
-    setFile(selectedFile);
+    const accepted = [];
+    const rejected = [];
+
+    incoming.forEach(
+      (selectedFile) => {
+        const validationError =
+          validateFile(
+            selectedFile
+          );
+
+        if (validationError) {
+          rejected.push(
+            validationError
+          );
+        } else {
+          accepted.push(
+            selectedFile
+          );
+        }
+      }
+    );
+
+    setFiles(accepted);
+
+    if (rejected.length) {
+      setError(
+        `${rejected.length} file${
+          rejected.length === 1
+            ? " was"
+            : "s were"
+        } skipped: ${rejected.join(
+          " "
+        )}`
+      );
+    } else {
+      setError("");
+    }
+
+    if (inputRef.current) {
+      inputRef.current.value =
+        "";
+    }
   }
 
   function handleDrop(
@@ -149,18 +195,26 @@ export default function UploadModal({
 
     setDragActive(false);
 
-    selectFile(
-      event.dataTransfer
-        .files?.[0]
+    selectFiles(
+      event.dataTransfer.files
     );
   }
 
-  function clearSelectedFile() {
+  function removeSelectedFile(
+    index
+  ) {
     if (loading) {
       return;
     }
 
-    setFile(null);
+    setFiles(
+      (currentFiles) =>
+        currentFiles.filter(
+          (_, fileIndex) =>
+            fileIndex !== index
+        )
+    );
+
     setError("");
 
     if (inputRef.current) {
@@ -174,7 +228,13 @@ export default function UploadModal({
       return;
     }
 
-    setFile(null);
+    setFiles([]);
+
+    setUploadProgress({
+      current: 0,
+      total: 0,
+    });
+
     setDescription("");
     setError("");
     setDragActive(false);
@@ -188,60 +248,138 @@ export default function UploadModal({
   }
 
   async function handleUpload() {
-    if (!file) {
+    if (!files.length) {
       setError(
-        "Choose a file before uploading."
+        "Choose at least one file before uploading."
       );
 
       return;
     }
 
-    const formData =
-      new FormData();
+    const totalFiles =
+      files.length;
 
-    formData.append(
-      "file",
-      file
-    );
+    const failedUploads = [];
 
-    if (description.trim()) {
-      formData.append(
-        "description",
-        description.trim()
-      );
-    }
+    let successfulUploads = 0;
 
     try {
       setLoading(true);
       setError("");
 
-      await api.post(
-        "/api/files",
-        formData
-      );
+      setUploadProgress({
+        current: 0,
+        total: totalFiles,
+      });
 
-      setFile(null);
-      setDescription("");
+      for (
+        let index = 0;
+        index < totalFiles;
+        index += 1
+      ) {
+        const currentFile =
+          files[index];
 
-      if (inputRef.current) {
-        inputRef.current.value =
-          "";
+        setUploadProgress({
+          current: index + 1,
+          total: totalFiles,
+        });
+
+        const formData =
+          new FormData();
+
+        formData.append(
+          "file",
+          currentFile
+        );
+
+        if (
+          description.trim()
+        ) {
+          formData.append(
+            "description",
+            description.trim()
+          );
+        }
+
+        try {
+          await api.post(
+            "/api/files",
+            formData
+          );
+
+          successfulUploads += 1;
+        } catch (
+          requestError
+        ) {
+          failedUploads.push({
+            file: currentFile,
+
+            message:
+              requestError
+                ?.response
+                ?.data
+                ?.message ||
+              "Upload failed.",
+          });
+        }
       }
 
-      if (onUploaded) {
+      if (
+        successfulUploads > 0 &&
+        onUploaded
+      ) {
         await onUploaded();
       }
 
-      onClose();
-    } catch (requestError) {
+      if (
+        failedUploads.length === 0
+      ) {
+        setFiles([]);
+        setDescription("");
+
+        if (
+          inputRef.current
+        ) {
+          inputRef.current.value =
+            "";
+        }
+
+        onClose();
+
+        return;
+      }
+
+      setFiles(
+        failedUploads.map(
+          (failure) =>
+            failure.file
+        )
+      );
+
+      const failedNames =
+        failedUploads
+          .map(
+            (failure) =>
+              `${failure.file.name}: ${failure.message}`
+          )
+          .join(" ");
+
       setError(
-        requestError
-          ?.response?.data
-          ?.message ||
-          "Unable to upload file."
+        `${successfulUploads} of ${totalFiles} file${
+          totalFiles === 1
+            ? ""
+            : "s"
+        } uploaded successfully. ` +
+          `${failedUploads.length} failed. ${failedNames}`
       );
     } finally {
       setLoading(false);
+
+      setUploadProgress({
+        current: 0,
+        total: 0,
+      });
     }
   }
 
@@ -327,7 +465,7 @@ export default function UploadModal({
               ? "active"
               : ""
           } ${
-            file
+            files.length > 0
               ? "has-file"
               : ""
           }`}
@@ -381,6 +519,7 @@ export default function UploadModal({
             ref={inputRef}
             hidden
             type="file"
+            multiple
             accept={
               ACCEPTED_FILES
             }
@@ -388,9 +527,8 @@ export default function UploadModal({
             onChange={(
               event
             ) =>
-              selectFile(
-                event.target
-                  .files?.[0]
+              selectFiles(
+                event.target.files
               )
             }
           />
@@ -402,12 +540,13 @@ export default function UploadModal({
           </div>
 
           <strong>
-            Drop your file here
+            Drop your files here
           </strong>
 
           <p>
             or click anywhere in this
-            area to browse your device
+            area to select one or more
+            files
           </p>
 
           <div className="upload-format-row">
@@ -449,53 +588,75 @@ export default function UploadModal({
           </small>
         </div>
 
-        {file && (
-          <div className="upload-selected-file">
-            <div className="upload-selected-file-icon">
-              <File
-                size={19}
-              />
-            </div>
+        {files.length > 0 && (
+          <>
+            {files.map(
+              (
+                selectedFile,
+                index
+              ) => (
+                <div
+                  className="upload-selected-file"
+                  key={`${selectedFile.name}-${selectedFile.size}-${selectedFile.lastModified}-${index}`}
+                >
+                  <div className="upload-selected-file-icon">
+                    <File
+                      size={19}
+                    />
+                  </div>
 
-            <div className="upload-selected-file-copy">
-              <span>
-                Selected file
-              </span>
+                  <div className="upload-selected-file-copy">
+                    <span>
+                      {files.length === 1
+                        ? "Selected file"
+                        : `Selected file ${
+                            index + 1
+                          } of ${
+                            files.length
+                          }`}
+                    </span>
 
-              <strong
-                title={
-                  file.name
-                }
-              >
-                {file.name}
-              </strong>
+                    <strong
+                      title={
+                        selectedFile.name
+                      }
+                    >
+                      {
+                        selectedFile.name
+                      }
+                    </strong>
 
-              <small>
-                {formatSize(
-                  file.size
-                )}
+                    <small>
+                      {formatSize(
+                        selectedFile.size
+                      )}
 
-                {file.type
-                  ? ` • ${file.type}`
-                  : ""}
-              </small>
-            </div>
+                      {selectedFile.type
+                        ? ` • ${selectedFile.type}`
+                        : ""}
+                    </small>
+                  </div>
 
-            <button
-              type="button"
-              onClick={(
-                event
-              ) => {
-                event.stopPropagation();
+                  <button
+                    type="button"
+                    onClick={(
+                      event
+                    ) => {
+                      event.stopPropagation();
 
-                clearSelectedFile();
-              }}
-              disabled={loading}
-              aria-label="Remove selected file"
-            >
-              <X size={16} />
-            </button>
-          </div>
+                      removeSelectedFile(
+                        index
+                      );
+                    }}
+                    disabled={loading}
+                    aria-label={`Remove ${selectedFile.name}`}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )
+            )}
+          </>
         )}
 
         <label className="upload-description">
@@ -523,14 +684,19 @@ export default function UploadModal({
                   .value
               )
             }
-            placeholder="Add a short description for this file..."
+            placeholder={
+              files.length > 1
+                ? "Add a description for these files..."
+                : "Add a short description for this file..."
+            }
             disabled={loading}
           />
 
           <div className="upload-description-footer">
             <span>
-              Useful for identifying
-              files later.
+              {files.length > 1
+                ? "This description will be applied to all selected files."
+                : "Useful for identifying files later."}
             </span>
 
             <span>
@@ -587,7 +753,7 @@ export default function UploadModal({
             }
             disabled={
               loading ||
-              !file
+              files.length === 0
             }
           >
             {loading ? (
@@ -597,7 +763,9 @@ export default function UploadModal({
                   size={18}
                 />
 
-                Uploading…
+                {uploadProgress.total > 1
+                  ? `Uploading ${uploadProgress.current} of ${uploadProgress.total}…`
+                  : "Uploading…"}
               </>
             ) : (
               <>
@@ -605,7 +773,9 @@ export default function UploadModal({
                   size={18}
                 />
 
-                Upload file
+                {files.length > 1
+                  ? `Upload ${files.length} files`
+                  : "Upload file"}
               </>
             )}
           </button>

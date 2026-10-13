@@ -1,0 +1,9 @@
+project_name = "azuredrop"
+location     = "West Europe"
+
+admin_username = "azureuser"
+
+ssh_public_key = "ssh-ed25519 REPLACE_WITH_YOUR_PUBLIC_KEY"
+
+postgres_admin_username = "azuredropadmin"
+postgres_admin_password = "REPLACE_WITH_A_SECURE_PASSWORD"

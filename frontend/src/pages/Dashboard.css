@@ -722,10 +722,108 @@
   color: white;
 }
 
+
+.az-bulk-toolbar {
+  min-height: 54px;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid
+    var(--soft-border);
+  background: #fffaf7;
+}
+
+.az-bulk-selection-actions,
+.az-bulk-delete-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.az-bulk-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.az-bulk-select-all input,
+.az-file-select-cell input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--aubergine);
+  cursor: pointer;
+}
+
+.az-selected-count {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #f0e5df;
+  color: #77554a;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.az-clear-selection,
+.az-bulk-cancel-button,
+.az-bulk-delete-button {
+  min-height: 32px;
+  padding: 0 11px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.az-clear-selection,
+.az-bulk-cancel-button {
+  border: 1px solid
+    var(--soft-border);
+  background: white;
+  color: var(--text);
+}
+
+.az-bulk-delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #d8a79a;
+  background: #fff3ef;
+  color: #a83e32;
+}
+
+.az-bulk-delete-button.confirming {
+  border-color: #a83e32;
+  background: #a83e32;
+  color: white;
+}
+
+.az-bulk-delete-warning {
+  color: #9b3434;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.az-file-select-head,
+.az-file-select-cell {
+  display: grid;
+  place-items: center;
+}
+
 .az-file-table-head,
 .az-file-row {
   display: grid;
   grid-template-columns:
+    28px
     minmax(240px, 2fr)
     minmax(100px, 0.7fr)
     minmax(80px, 0.6fr)
@@ -762,6 +860,14 @@
 
 .az-file-row:hover {
   background: #fdf7f3;
+}
+
+.az-file-row.selected {
+  background: #fff4ee;
+}
+
+.az-file-row.selected:hover {
+  background: #fcebe3;
 }
 
 .az-file-name-cell {
@@ -1038,8 +1144,18 @@
     display: none;
   }
 
+  .az-bulk-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .az-bulk-delete-actions {
+    width: 100%;
+  }
+
   .az-file-row {
     grid-template-columns:
+      24px
       minmax(0, 1fr)
       auto;
     padding:
@@ -1048,11 +1164,11 @@
   }
 
   .az-file-row
-    > span:nth-child(2),
-  .az-file-row
     > span:nth-child(3),
   .az-file-row
-    > span:nth-child(5) {
+    > span:nth-child(4),
+  .az-file-row
+    > span:nth-child(6) {
     display: none;
   }
 }
