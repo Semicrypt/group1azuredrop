@@ -736,6 +736,29 @@ The public deployment has been tested for:
 
 ---
 
+## Project Demonstration Screenshots
+
+The screenshots below demonstrate the key features of AzureDrop,
+from user authentication and file management to the CI/CD workflow.
+
+| Landing Page | Account Creation |
+|:---:|:---:|
+| ![AzureDrop Landing Page](Demo_Screenshots/Landingpage.png) | ![Account Creation](Demo_Screenshots/Accountcreation.png) |
+
+| Login Page | Dashboard |
+|:---:|:---:|
+| ![Login Page](Demo_Screenshots/Loginpage.png) | ![Dashboard](Demo_Screenshots/Dashboard.png) |
+
+| File Upload | File Management |
+|:---:|:---:|
+| ![File Upload](Demo_Screenshots/Uploadingfiles.png) | ![File Management](Demo_Screenshots/Filemanagement.png) |
+
+| Secure File Sharing | CI/CD Pipeline |
+|:---:|:---:|
+| ![Secure File Sharing](Demo_Screenshots/Filesharing.png) | ![CI/CD Pipeline](Demo_Screenshots/CICD.png) |
+
+---
+
 ## DevOps Highlights
 
 This project demonstrates practical experience with:
