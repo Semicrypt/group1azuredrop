@@ -1,0 +1,7 @@
+project_name  = "azuredrop"
+aws_region    = "eu-north-1"
+instance_type = "t3.small"
+
+ssh_public_key = "ssh-ed25519 REPLACE_WITH_YOUR_PUBLIC_KEY"
+
+ssh_allowed_cidr = "YOUR_PUBLIC_IP/32"
