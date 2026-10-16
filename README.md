@@ -852,11 +852,6 @@ The project objectives are to:
 
 **Group 1 — AzureDrop Capstone Project**
 
-- **Nwachukwu Ifeanyi Divine**
-- Add the remaining Group 1 member names here before final submission.
-
----
-
 ## Project Status
 
 AzureDrop has completed the major application and DevOps implementation milestones:
